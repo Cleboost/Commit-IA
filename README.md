@@ -1,6 +1,6 @@
 # ✨ The ultimate IA Commit Message 
 
-## 📚 Table of Contents*
+## 📚 Table of Contents
 - [📖 Introduction](#-introduction)
 - [📦 Installation](#-installation)
 - [🔧 Usage](#-usage)
