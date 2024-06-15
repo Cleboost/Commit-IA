@@ -60,16 +60,24 @@ async function getCommitMessage() {
     const promises = diffFiles.map(async (file) => {
         const diff = getDiff(file);
         const promptMessage = makePrompt(diff);
-        const response = await prompt(promptMessage);
-        const commitMessage = postTraitement(response);
+
+        let response;
+        let commitMessage = "";
+
+        // Keep generating until we get a non-empty commit message
+        while (!commitMessage.trim()) {
+            response = await prompt(promptMessage);
+            commitMessage = postTraitement(response);
+        }
 
         return { msg: commitMessage, filename: file };
     });
 
     const res = await Promise.all(promises);
-    console.log(res)
+    console.log(res);
     return res;
 }
+
 
 
 
