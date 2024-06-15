@@ -29,8 +29,6 @@ async function prompt(prompt) {
         }
     })
 
-    // console.log(res)
-
     return res.data.response
 }
 
@@ -50,42 +48,32 @@ function listDiffFiles() {
     return execSync('git status --porcelain').toString().split('\n').map(line => line.split(' ')[line.split(' ').length - 1]).filter(Boolean)
 }
 
-function makePrompt(diff) {
-    return promptText + diff
-}
-
 async function getCommitMessage() {
     const diffFiles = listDiffFiles();
 
     const promises = diffFiles.map(async (file) => {
         const diff = getDiff(file);
-        const promptMessage = makePrompt(diff);
 
         let response;
         let commitMessage = "";
 
         // Keep generating until we get a non-empty commit message
         while (!commitMessage.trim()) {
-            response = await prompt(promptMessage);
+            response = await prompt(promptText + diff);
             commitMessage = postTraitement(response);
         }
 
         return { msg: commitMessage, filename: file };
     });
 
-    const res = await Promise.all(promises);
-    console.log(res);
-    return res;
+    return await Promise.all(promises);
 }
-
-
-
 
 getCommitMessage().then(res => {
     if (res.length === 0) return console.log("No files to commit. Be sure to have some changes or add the files to the git index (git add <file>)")
     for (const {msg, filename} of res) {
         execSync(`git add ${filename}`)
         execSync(`git commit -m "${msg}" ${filename}`)
-        console.log(`Commit message for ${filename}: ${msg}`)
+        console.log(`${filename}: ${msg}`)
     }
 })
