@@ -1,6 +1,6 @@
 {
   "name": "commit-ia",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "✨ Make beautiful commit message with Ollama IA",
   "main": "index.js",
   "scripts": {
