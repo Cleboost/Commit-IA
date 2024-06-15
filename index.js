@@ -63,7 +63,7 @@ async function getCommitMessage() {
             commitMessage = postTraitement(response);
         }
 
-        return { msg: commitMessage, filename: file };
+        return {msg: commitMessage, filename: file};
     });
 
     return await Promise.all(promises);
