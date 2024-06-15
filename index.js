@@ -1,7 +1,9 @@
 const {execSync} = require('child_process');
 const axios = require('axios');
 
-const params = process.argv.slice(2);
+
+// @TODO: Add support for params and customizations
+// const params = process.argv.slice(2);
 const commitTypes = [
     "✨ feat: ",
     "🚑 fix: ",
