@@ -13,7 +13,7 @@
 This is a simple README.md template for your projects. It is designed to be easy to use and to provide a good starting point for your project documentation.
 
 ## 📦 Installation
-1. `npm install commit-ia`
+1. `npm install commit-ia -g`
 2. Install Ollama [Ollama](https://ollama.com/download)
     1. Install Mistral Model `ollama run mistral`
     2. Be sure to Ollama serve is running `ollama serve`
