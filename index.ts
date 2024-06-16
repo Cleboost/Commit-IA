@@ -2,6 +2,7 @@ import {execSync} from 'child_process';
 import axios from 'axios';
 import ora, {Ora} from 'ora';
 import preMessage from './premessage.json' assert { type: 'json' };
+import * as constants from "node:constants";
 
 // @TODO: Add support for params and customizations
 // const params = process.argv.slice(2);
@@ -106,6 +107,7 @@ getCommitMessage().then((res: Array<{ msg: string, filename: string }>) => {
     }
 })
 
-console.error = function() {
-    process.stderr.write('❌ ');
+//add cross to all console.error
+console.error = (message: string) => {
+    console.log(`❌ ${message}`)
 }
