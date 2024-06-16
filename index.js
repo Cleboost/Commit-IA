@@ -129,8 +129,7 @@ async function promptUser(prompt) {
 }
 
 function postTraitement(text, commitType) {
-    // console.log(text)
-    const emojiRegex =  /\p{Extended_Pictographic}/gu;
+    const emojiRegex = /\p{Extended_Pictographic}/gu;
 
     let res = text.trim();
     res = res.replace(/[^a-zA-Z\p{Extended_Pictographic}\s:]/gu, ""); // Remove special characters
@@ -149,7 +148,7 @@ function postTraitement(text, commitType) {
         const emoji = res.match(emojiRegex)[0]
         if (emoji) {
             const type = Object.keys(commitTypes).find(key => commitTypes[key] === emoji)
-            res = res.replace(emoji, commitTypes[type] +" " +type+" ")
+            res = res.replace(emoji, `${commitTypes[type]} ${type} `)
         }
     }
 
@@ -157,7 +156,6 @@ function postTraitement(text, commitType) {
 
     return res;
 }
-
 
 
 async function getCommitMessage() {
