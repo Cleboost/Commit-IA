@@ -1,6 +1,6 @@
-export default [
+[
     {
-        filename: "package-lock.json",
-        msg: "🔧 chore: update package-lock.json"
+        "filename": "package-lock.json",
+        "msg": "🔧 chore: update package-lock.json"
     }
 ]
