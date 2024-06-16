@@ -2,10 +2,9 @@
   "name": "commit-ia",
   "version": "1.1.0",
   "description": "✨ Make beautiful commit message with Ollama IA",
-  "main": "index.ts",
+  "main": "index.js",
   "scripts": {
-    "test": "node --no-warnings --loader ts-node/esm index.ts",
-    "build": "tsc index.ts --outDir dist"
+    "test": "node ."
   },
   "type": "commonjs",
   "author": "Cleboost",
