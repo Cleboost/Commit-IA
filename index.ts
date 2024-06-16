@@ -21,6 +21,15 @@ const promptText = `Summarize this git diff into a useful, 10 words commit messa
 Patern is: <emoji> <type>: <message>
 You can use the following types: ${JSON.stringify(commitTypes)} :`;
 
+
+function listDiffFiles(): Array<string> {
+    return execSync('git status --porcelain').toString().split('\n').map((line: string) => line.split(' ')[line.split(' ').length - 1]).filter(Boolean)
+}
+
+function getDiff(filename: string): string {
+    return execSync(`git diff ${filename}`).toString()
+}
+
 async function prompt(prompt: string): Promise<string> {
     return (await axios.post('http://127.0.0.1:11434/api/generate', {
         prompt: prompt,
@@ -35,10 +44,6 @@ async function prompt(prompt: string): Promise<string> {
     })).data.response;
 }
 
-function getDiff(filename: string): string {
-    return execSync(`git diff ${filename}`).toString()
-}
-
 function postTraitement(text: string): string {
     let res = text
     res = res.replace(/^[^✨🚑📝💄♻️✅🔧]*/, ""); // remove everything before the emoji
@@ -46,10 +51,6 @@ function postTraitement(text: string): string {
     res = res.split("\n")[0]
 
     return res
-}
-
-function listDiffFiles(): Array<string> {
-    return execSync('git status --porcelain').toString().split('\n').map((line: string) => line.split(' ')[line.split(' ').length - 1]).filter(Boolean)
 }
 
 async function getCommitMessage(): Promise<{ msg: string, filename: string }[]> {
@@ -103,10 +104,10 @@ async function getCommitMessage(): Promise<{ msg: string, filename: string }[]> 
     return results;
 }
 
+
 execSync('git config core.autocrlf false')
 
 getCommitMessage().then((res: Array<{ msg: string, filename: string }>) => {
-    console.log("\n\n")
     if (res.length === 0) return console.log("No files to commit. Be sure to have some changes or add the files to the git index (git add <file>)")
     for (const {msg, filename} of res) {
         execSync(`git add ${filename}`)
