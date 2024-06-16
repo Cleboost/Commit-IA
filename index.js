@@ -1,147 +1,243 @@
 #!/usr/bin/env node
 
-import {execSync} from 'child_process';
-import axios from 'axios';
-import {default as ora, Ora} from 'ora';
-import preMessage from './premessage';
-import * as fs from 'fs';
-import inquirer from 'inquirer';
+const {execSync} = require('child_process');
+const axios = require('axios').default;
+let ora = null
+const preMessage = require('./premessage.json');
+const fs = require('fs');
+let inquirer = null;
+let chalk = null;
 
 // @TODO: Add support for params and customizations
 // const params = process.argv.slice(2);
-const commitTypes = [
-    "✨ feat: ",
-    "🚑 fix: ",
-    "📝 docs: ",
-    "💄 style: ",
-    "♻️ refactor: ",
-    "✅ test: ",
-    "🔧 chore: "
-];
+const commitTypes = {
+    feat: "✨",      // Feature
+    fix: "🚑",       // Bug fix
+    docs: "📝",      // Documentation
+    style: "💄",     // Style
+    refactor: "♻️", // Refactoring
+    test: "✅",      // Tests
+    chore: "🔧"      // Chores
+};
 
 // If you have a better prompt, feel free to change it :)
-const promptText = `Summarize this git diff into a useful, 10 words commit message. 
-Patern is: <emoji> <type>: <message>
-You can use the following types: ${JSON.stringify(commitTypes)} :`;
+const promptText = `Summarize this git diff into a useful, 10 words commit message.
+Pattern is: <emoji> <type>: <message>
+Give in output only my pattern, not the whole diff.
+You can use the following types: ${Object.keys(commitTypes).map(type => `${commitTypes[type]} ${type}`).join(', ')} :`;
 
-
-function listDiffFiles(): Array<string> {
-    return execSync('git status --porcelain').toString().split('\n').map((line: string) => line.split(' ')[line.split(' ').length - 1]).filter(Boolean)
+async function init() {
+    ora = (await import('ora')).default
+    inquirer = (await import('inquirer')).default
+    chalk = (await import('chalk')).default
+    execSync('git config core.autocrlf false');
+    main();
 }
 
-function getDiff(filename: string): string {
-    return execSync(`git diff ${filename}`).toString()
+function main() {
+    console.log("🚀 Welcome to the Git Commit Message Generator 🚀\n")
+    getCommitMessage().then(async res => {
+        if (res.length === 0) return console.log("No files to commit. Be sure to have some changes or add the files to the git index (git add <file>)");
+        console.log("\n\n");
+        for (const {msg, filename} of res) {
+            console.log(`✅  ${filename}: ${msg}`);
+        }
+        console.log("\n");
+
+        const satisfaction = await inquirer.prompt([
+            {
+                type: 'confirm',
+                name: 'satisfying',
+                message: 'Are you satisfied with the commit messages?',
+                default: true
+            }
+        ]);
+
+        if (!satisfaction.satisfying) return console.log("Please commit manually or run the script again.") && process.exit(0);
+
+        for (const {msg, filename} of res) {
+            if (fs.existsSync(filename)) execSync(`git add ${filename}`);
+            execSync(`git commit -m "${msg}"`);
+        }
+
+        const push = await inquirer.prompt([
+            {
+                type: 'confirm',
+                name: 'push',
+                message: 'Do you want to push the changes?',
+                default: false
+            }
+        ]);
+
+        if (push.push) execSync('git push');
+        console.log("\n\n✅  All done!");
+    }).catch(error => {
+        console.error('Error:', error.message);
+        process.exit(1);
+    });
 }
 
-async function prompt(prompt: string): Promise<string> {
-    return (await axios.post('http://127.0.0.1:11434/api/generate', {
+function listDiffFiles() {
+    return execSync('git status --porcelain').toString().split('\n').map(line => line.split(' ')[line.split(' ').length - 1]).filter(Boolean);
+}
+
+function getDiff(filename) {
+    return execSync(`git diff ${filename}`).toString();
+}
+
+async function promptUser(prompt) {
+
+    const response = await axios.post('http://127.0.0.1:11434/api/generate', {
         prompt: prompt,
-        temperature: 0.5,
-        max_tokens: 60,
-        model: "mistral",
-        stream: false
+        model: "llama3:8b",
+        stream: false,
+        options: {
+            num_keep: 5,
+            seed: 123,
+            num_predict: 20,
+            top_k: 40,
+            top_p: 2,
+            tfs_z: 0.5,
+            typical_p: 0.7,
+            repeat_last_n: 33,
+            temperature: 0.4,
+            repeat_penalty: 1.2,
+            presence_penalty: 1.8,
+            frequency_penalty: 1.2,
+            mirostat: 1,
+            mirostat_tau: 0.8,
+            mirostat_eta: 0.6,
+            penalize_newline: true
+        }
     }, {
         headers: {
             'Content-Type': 'application/json'
+        },
+        timeout: 10000
+    }).catch(error => {
+        // console.log(error)
+        console.log("timeout")
+        if (error.code === 'ECONNABORTED') {
+            return {data: {response: "timeout"}};
         }
-    })).data.response;
+    })
+    // console.log(response.data.response)
+    return response.data.response;
 }
 
-function postTraitement(text: string): string {
-    let res = text
-    res = res.replace(/^[^✨🚑📝💄♻️✅🔧]*/, ""); // remove everything before the emoji
-    res = res.replace(/['"`]/g, "")
-    res = res.split("\n")[0]
+function postTraitement(text,commitType) {
+    const emoji = commitTypes[commitType] || "🛠️";
+    let res = text.trim();
+    if (!res.startsWith(emoji)) {
+        res = `${emoji} ${res}`;
+    }
+    // res = res.replace(/^[^✨🚑📝💄♻️✅🔧]*/, ""); // remove everything before the emoji
+    res = res.replace(/['"`]/g, "");
+    res = res.split("\n")[0];
+    // if (res.match(/^[^ ]/)) res = res.replace(/^(.)/, "$1 ");
 
-    return res
+    return res;
 }
 
-async function getCommitMessage(): Promise<{ msg: string, filename: string }[]> {
-    const diffFiles: string[] = listDiffFiles();
-    const results: { msg: string, filename: string }[] = [];
-    const spinner: Ora = ora('Generating commit messages').start();
+async function getCommitMessage() {
+    const diffFiles = listDiffFiles();
+    const results = [];
+    let counterTotal = 0;
+    let counterFile = 0;
+
 
     for (let i = 0; i < diffFiles.length; i++) {
-        const file: string = diffFiles[i];
-        const preMsg = preMessage.find((e) => e.filename === file);
+        counterFile = 0;
+        const spinner = ora(`Generating commit messages for ${diffFiles[i]} (${i + 1}/${diffFiles.length})`).start();
+        const interval = setInterval(() => {
+            counterTotal++;
+            counterFile++;
+            spinner.suffixText = `(file: ${formatTime(counterFile)}, total: ${formatTime(counterTotal)})`;
+        }, 1000);
+
+
+        const file = diffFiles[i];
+        const preMsg = preMessage.find(e => e.filename === file);
         if (preMsg) {
-            results.push({ msg: preMsg.msg, filename: file });
+            results.push({msg: preMsg.msg, filename: file});
+            spinner.succeed(`Commit message generated for ${file} (${i + 1}/${diffFiles.length})`);
+            clearInterval(interval);
             continue;
         }
 
         if (!fs.existsSync(file)) {
-            results.push({ msg: "🔧 chore: delete file", filename: file });
+            results.push({msg: "🔧 chore: delete file", filename: file});
+            spinner.succeed(`File ${file} was deleted. Commit message generated.`);
+            clearInterval(interval);
             continue;
         }
 
-        spinner.text = `Generating commit messages for ${file} (${i + 1}/${diffFiles.length})`;
 
-        let diff: string;
+        let diff;
         try {
             diff = getDiff(file);
         } catch (error) {
-            console.error(`❌ Error getting diff for file ${file}. Try to commit manually.`);
+            spinner.fail(`Error getting diff for file ${file}. Try to commit manually.`);
             continue;
         }
 
-        let response: string;
-        let commitMessage: string = "";
+        let response;
+        let commitMessage = "";
 
         // Keep generating until we get a non-empty commit message
         while (!commitMessage.trim()) {
             try {
-                response = await prompt(promptText + diff);
-                commitMessage = postTraitement(response);
+                response = await promptUser(promptText + diff);
+                if (response === "timeout") {
+                    commitMessage = response;
+                    break;
+                }
+                commitMessage = postTraitement(response, detectCommitType(response));
             } catch (e) {
-                console.error(`❌ Error generating commit message for file ${file}. Try to commit manually.`);
+                console.error(e);
+                spinner.fail(`Error generating commit message for file ${file}. Try to commit manually.`);
                 break;
             }
         }
 
-        if (commitMessage.trim()) {
-            results.push({ msg: commitMessage, filename: file });
+        if (commitMessage === "timeout") {
+            spinner.fail(`Timeout generating commit. Try to commit manually.`);
+            continue;
         }
+
+        if (commitMessage.trim()) {
+            results.push({msg: commitMessage, filename: file});
+            spinner.succeed(`Commit message generated for ${file} (${i + 1}/${diffFiles.length})`);
+        }
+
+        clearInterval(interval);
     }
 
-    spinner.stop();
     return results;
 }
 
-
-execSync('git config core.autocrlf false')
-
-getCommitMessage().then(async (res: Array<{ msg: string, filename: string }>) => {
-    if (res.length === 0) return console.log("No files to commit. Be sure to have some changes or add the files to the git index (git add <file>)")
-    for (const {msg, filename} of res) {
-        console.log(`✅  ${filename}: ${msg}`)
-    }
-    console.log("\n")
-
-    const satis = await inquirer.prompt([
-        {
-            type: 'confirm',
-            name: 'satisfying',
-            message: 'Are you satisfied with the commit messages?',
-            default: true
+function detectCommitType(message) {
+    for (const type in commitTypes) {
+        if (message.startsWith(type)) {
+            return type;
         }
-    ])
-
-    if (!satis.satisfying) return console.log("Please commit manually or run the script again.")
-
-    for (const {msg, filename} of res) {
-        execSync(`git add ${filename}`)
-        execSync(`git commit -m "${msg}"`)
     }
+    return "chore";
+}
 
-    const push = await inquirer.prompt([
-        {
-            type: 'confirm',
-            name: 'push',
-            message: 'Do you want to push the changes?',
-            default: false
-        }
-    ])
+function formatTime(seconds) {
+    if (seconds < 60) {
+        return `${seconds}sec`;
+    } else if (seconds < 3600) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes}min ${remainingSeconds}sec`;
+    } else {
+        const hours = Math.floor(seconds / 3600);
+        const remainingMinutes = Math.floor((seconds % 3600) / 60);
+        const remainingSeconds = seconds % 60;
+        return `${hours}h ${remainingMinutes}min ${remainingSeconds}sec`;
+    }
+}
 
-    if (push.push) execSync('git push')
-    console.log("\n\n✅  All done!")
-})
+init();
