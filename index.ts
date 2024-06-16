@@ -2,7 +2,7 @@ import {execSync} from 'child_process';
 import axios from 'axios';
 import ora, {Ora} from 'ora';
 import preMessage from './premessage.json' assert { type: 'json' };
-import * as constants from "node:constants";
+import fs from 'fs';
 
 // @TODO: Add support for params and customizations
 // const params = process.argv.slice(2);
@@ -63,13 +63,18 @@ async function getCommitMessage(): Promise<{ msg: string, filename: string }[]> 
             continue;
         }
 
+        if (!fs.existsSync(file)) {
+            results.push({ msg: "🔧 chore: delete file", filename: file });
+            continue;
+        }
+
         spinner.text = `Generating commit messages for ${file} (${i + 1}/${diffFiles.length})`;
 
         let diff: string;
         try {
             diff = getDiff(file);
         } catch (error) {
-            console.error(`Error getting diff for file ${file}:`, error.message);
+            console.error(`Error getting diff for file ${file}. Try to commit manually.`);
             continue;
         }
 
@@ -99,6 +104,7 @@ async function getCommitMessage(): Promise<{ msg: string, filename: string }[]> 
 execSync('git config core.autocrlf false')
 
 getCommitMessage().then((res: Array<{ msg: string, filename: string }>) => {
+    console.log("\n\n")
     if (res.length === 0) return console.log("No files to commit. Be sure to have some changes or add the files to the git index (git add <file>)")
     for (const {msg, filename} of res) {
         execSync(`git add ${filename}`)
