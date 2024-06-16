@@ -45,7 +45,6 @@ function postTraitement(text: string): string {
     res = res.replace(/['"`]/g, "")
     res = res.split("\n")[0]
 
-
     return res
 }
 
