@@ -15,7 +15,7 @@ This project is a simple CLI to generate commit message with the help of an IA. 
 ## 📦 Installation
 1. `npm install commit-ia -g`
 2. Install Ollama [Ollama](https://ollama.com/download)
-    1. Install Mistral Model `ollama run mistral`
+    1. Install Llama3 Model `ollama run llama3:8b`
     2. Be sure to Ollama serve is running `ollama serve`
 
 ## 🔧 Usage
