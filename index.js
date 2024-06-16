@@ -1,8 +1,10 @@
+#!/usr/bin/env node
+
 import {execSync} from 'child_process';
 import axios from 'axios';
-import ora, {Ora} from 'ora';
-import preMessage from './premessage.json' assert { type: 'json' };
-import fs from 'fs';
+import {default as ora, Ora} from 'ora';
+import preMessage from './premessage';
+import * as fs from 'fs';
 import inquirer from 'inquirer';
 
 // @TODO: Add support for params and customizations

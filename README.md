@@ -10,7 +10,7 @@
 - [📧 Contact](#-contact)
 
 ## 📖 Introduction
-This is a simple README.md template for your projects. It is designed to be easy to use and to provide a good starting point for your project documentation.
+This project is a simple CLI to generate commit message with the help of an IA. The IA is provided by [Ollama](https://ollama.com) and the model is Mistral.
 
 ## 📦 Installation
 1. `npm install commit-ia -g`
