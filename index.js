@@ -39,7 +39,8 @@ async function init() {
 }
 
 function main() {
-    console.log("🚀 Welcome to the Git Commit Message Generator 🚀\n")
+    console.log("🚀 Welcome to the Git Commit Message Generator 🚀")
+    console.log(chalk.yellow("⚠️ This script use your GPU to run IA\n"))
     getCommitMessage().then(async res => {
         if (res.length === 0) return console.log("No files to commit. Be sure to have some changes or add the files to the git index (git add <file>)");
         console.log("\n\n");
@@ -47,6 +48,7 @@ function main() {
             console.log(`✅  ${filename}: ${msg}`);
         }
         console.log("\n");
+        console.log(chalk.yellow("⚠️ The spaces are not correctly rendered in the terminal but don't panic, they are correct in the commits. TODO fix \n"))
 
         const satisfaction = await inquirer.prompt([
             {
@@ -135,8 +137,8 @@ function postTraitement(text, commitType) {
     res = res.replace(/[^a-zA-Z\p{Extended_Pictographic}\s:]/gu, ""); // Remove special characters
     res = res.replace(/\n/g, " "); // Remove new lines
 
-    res = res.split(": ").shift() + ": " + res.split(": ").slice(1).join(": ").replaceAll(emojiRegex, "");
-    res = res.replace(/['"`]/g, '');
+    res = res.split(": ").shift() + ": " + res.split(": ").slice(1).join(": ").replaceAll(emojiRegex, ""); // Remove emojis except the first one
+    res = res.replace(/['"`]/g, ''); // Remove quotes
 
     if (!text.match(emojiRegex)) res = commitTypes[commitType] + " " + res; // Add emoji if not present
 
@@ -154,7 +156,6 @@ function postTraitement(text, commitType) {
     const emoji = res.match(emojiRegex)[0]
     if (emoji) {
         if (emoji !== commitTypes[type]) {
-            console.log(commitTypes[type], type)
             res = res.replace(emoji, `${commitTypes[type]}`)
         }
     }
@@ -163,7 +164,6 @@ function postTraitement(text, commitType) {
 
     return res;
 }
-
 
 async function getCommitMessage() {
     const diffFiles = listDiffFiles();
