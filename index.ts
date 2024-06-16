@@ -3,6 +3,7 @@ import axios from 'axios';
 import ora, {Ora} from 'ora';
 import preMessage from './premessage.json' assert { type: 'json' };
 import fs from 'fs';
+import inquirer from 'inquirer';
 
 // @TODO: Add support for params and customizations
 // const params = process.argv.slice(2);
@@ -107,11 +108,38 @@ async function getCommitMessage(): Promise<{ msg: string, filename: string }[]> 
 
 execSync('git config core.autocrlf false')
 
-getCommitMessage().then((res: Array<{ msg: string, filename: string }>) => {
+getCommitMessage().then(async (res: Array<{ msg: string, filename: string }>) => {
     if (res.length === 0) return console.log("No files to commit. Be sure to have some changes or add the files to the git index (git add <file>)")
     for (const {msg, filename} of res) {
-        execSync(`git add ${filename}`)
-        execSync(`git commit -m "${msg}" ${filename}`)
         console.log(`✅  ${filename}: ${msg}`)
     }
+    console.log("\n")
+
+    const satis = await inquirer.prompt([
+        {
+            type: 'confirm',
+            name: 'satisfying',
+            message: 'Are you satisfied with the commit messages?',
+            default: true
+        }
+    ])
+
+    if (!satis.satisfying) return console.log("Please commit manually or run the script again.")
+
+    for (const {msg, filename} of res) {
+        execSync(`git add ${filename}`)
+        execSync(`git commit -m "${msg}"`)
+    }
+
+    const push = await inquirer.prompt([
+        {
+            type: 'confirm',
+            name: 'push',
+            message: 'Do you want to push the changes?',
+            default: false
+        }
+    ])
+
+    if (push.push) execSync('git push')
+    console.log("\n\n✅  All done!")
 })
