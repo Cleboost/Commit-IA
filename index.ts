@@ -56,15 +56,12 @@ async function getCommitMessage(): Promise<{ msg: string, filename: string }[]> 
 
     for (let i = 0; i < diffFiles.length; i++) {
         const file: string = diffFiles[i];
-
-        // Check if preMessage already contains the commit message for the file
         const preMsg = preMessage.find((e) => e.filename === file);
         if (preMsg) {
             results.push({ msg: preMsg.msg, filename: file });
             continue;
         }
 
-        // Clear the previous line and print the current file being processed
         spinner.text = `Generating commit messages for ${file} (${i + 1}/${diffFiles.length})`;
 
         let diff: string;
@@ -83,9 +80,9 @@ async function getCommitMessage(): Promise<{ msg: string, filename: string }[]> 
             try {
                 response = await prompt(promptText + diff);
                 commitMessage = postTraitement(response);
-            } catch (error) {
-                console.error(`Error generating commit message for file ${file}:`, error.message);
-                break;  // Skip to the next file on error
+            } catch (e) {
+                console.error(`Error generating commit message for file ${file}. Try to commit manually.`);
+                break;
             }
         }
 
@@ -105,6 +102,10 @@ getCommitMessage().then((res: Array<{ msg: string, filename: string }>) => {
     for (const {msg, filename} of res) {
         execSync(`git add ${filename}`)
         execSync(`git commit -m "${msg}" ${filename}`)
-        console.log(`${filename}: ${msg}`)
+        console.log(`✅ ${filename}: ${msg}`)
     }
 })
+
+console.error = function() {
+    process.stderr.write('❌ ');
+}
