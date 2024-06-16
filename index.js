@@ -153,7 +153,7 @@ function postTraitement(text, commitType) {
         }
     }
 
-    const emoji = res.match(emojiRegex)[0]
+    const emoji = res?.match(emojiRegex)[0]
     if (emoji) {
         if (emoji !== commitTypes[type]) {
             res = res.replace(emoji, `${commitTypes[type]}`)
@@ -174,7 +174,7 @@ async function getCommitMessage() {
 
     for (let i = 0; i < diffFiles.length; i++) {
         counterFile = 0;
-        const spinner = ora(`Generating commit messages for ${diffFiles[i]} (${i + 1}/${diffFiles.length})`).start();
+        const spinner = ora(`Generating commit messages for ${diffFiles[i]} ${chalk.magenta(`(${i + 1}/${diffFiles.length})`)}`).start();
         const interval = setInterval(() => {
             counterTotal++;
             counterFile++;
@@ -233,7 +233,7 @@ async function getCommitMessage() {
 
         if (commitMessage.trim()) {
             results.push({msg: commitMessage, filename: file});
-            spinner.succeed(`Commit message generated for ${file} (${i + 1}/${diffFiles.length})`);
+            spinner.succeed(`Commit message generated for ${file} ${chalk.magenta(`(${i + 1}/${diffFiles.length})`)}`);
         }
 
         clearInterval(interval);
