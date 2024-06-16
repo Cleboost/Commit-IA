@@ -146,18 +146,19 @@ function postTraitement(text, commitType) {
     res = res.replace(typePattern, match => ` ${match}`); // Add space after emoji
 
     const type = res.split(":")[0].trim().replace(emojiRegex, "").replace(":", "").replace(" ", "")
-    if (type === "") {
-        const emoji = res.match(emojiRegex)[0]
-        if (emoji) {
-            res = res.replace(emoji, `${commitTypes[type]} ${type} `)
-        }
-    }
+    const emoji = res?.match(emojiRegex)?.[0];
 
-    const emoji = res?.match(emojiRegex)[0]
-    if (emoji) {
-        if (emoji !== commitTypes[type]) {
-            res = res.replace(emoji, `${commitTypes[type]}`)
+    if (type === "" && emoji) {
+        const newType = Object.keys(commitTypes).find(key => commitTypes[key] === emoji);
+        res = res.replace(emoji, `${commitTypes[newType]} ${newType} `)
+    } else if (type !== "" && !emoji) {
+        if (type !== commitType) {
+            res = res.replace(type, `${commitTypes[commitType]} ${commitType} `)
         }
+    } else if (emoji !== commitTypes[type]) {
+        res = res.replace(emoji, `${commitTypes[type]}`)
+    } else {
+        res = ""
     }
 
     res = res.replace(/(\s{2,})/g, " "); // Remove multiple spaces
