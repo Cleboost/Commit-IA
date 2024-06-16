@@ -15,7 +15,7 @@ const commitTypes = {
     fix: "🚑",       // Bug fix
     docs: "📝",      // Documentation
     style: "💄",     // Style
-    refactor: "♻️", // Refactoring
+    refactor: "♻️",  // Refactoring
     test: "✅",      // Tests
     chore: "🔧"      // Chores
 };
@@ -95,7 +95,7 @@ async function promptUser(prompt) {
             num_keep: 5,
             seed: 123,
             num_predict: 20,
-            top_k: 40,
+            top_k: 30,
             top_p: 2,
             tfs_z: 0.5,
             typical_p: 0.7,
@@ -125,19 +125,27 @@ async function promptUser(prompt) {
     return response.data.response;
 }
 
-function postTraitement(text,commitType) {
-    const emoji = commitTypes[commitType] || "🛠️";
+function postTraitement(text, commitType) {
+    const emojiRegex =  /\p{Extended_Pictographic}/gu;
+
+
     let res = text.trim();
-    if (!res.startsWith(emoji)) {
-        res = `${emoji} ${res}`;
-    }
-    // res = res.replace(/^[^✨🚑📝💄♻️✅🔧]*/, ""); // remove everything before the emoji
-    res = res.replace(/['"`]/g, "");
-    res = res.split("\n")[0];
-    // if (res.match(/^[^ ]/)) res = res.replace(/^(.)/, "$1 ");
+    res = res.replace(/[^a-zA-Z\p{Extended_Pictographic}\s:]/gu, ""); // Remove special characters
+    res = res.replace(/\n/g, " ");
+
+    res = res.split(": ").shift() + ": " + res.split(": ").slice(1).join(": ").replaceAll(emojiRegex, "");
+    res = res.replace(/['"`]/g, '');
+    console.log(res)
+
+    if (!text.match(emojiRegex)) res = commitTypes[commitType] + " " + res;
+
+    const typePattern = new RegExp(`(${Object.keys(commitTypes).map(type => commitTypes[type].trim()).join('|')})`);
+    res = res.replace(typePattern, match => ` ${match}`);
 
     return res;
 }
+
+
 
 async function getCommitMessage() {
     const diffFiles = listDiffFiles();
@@ -217,9 +225,24 @@ async function getCommitMessage() {
 }
 
 function detectCommitType(message) {
-    for (const type in commitTypes) {
-        if (message.startsWith(type)) {
-            return type;
+    const detect = [
+        {feat: ["feature", "feat", "add", "new"]},
+        {fix: ["fix", "bug", "error"]},
+        {docs: ["docs", "documentation"]},
+        {style: ["style", "format"]},
+        {refactor: ["refactor", "improve"]},
+        {test: ["test", "testing"]},
+        {chore: ["chore", "update", "change"]}
+    ]
+
+    const words = message.split(" ");
+    for (const type of detect) {
+        for (const key in type) {
+            for (const word of type[key]) {
+                if (words.includes(word)) {
+                    return key;
+                }
+            }
         }
     }
     return "chore";
