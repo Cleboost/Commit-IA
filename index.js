@@ -2,11 +2,15 @@
 
 const {execSync} = require('child_process');
 const axios = require('axios').default;
-let ora = null
-const preMessage = require('./premessage.json');
 const fs = require('fs');
+
 let inquirer = null;
 let chalk = null;
+let ora = null
+
+const preMessage = require('./premessage.json');
+const detect = require('./typeDetection.json');
+
 
 // @TODO: Add support for params and customizations
 // const params = process.argv.slice(2);
@@ -86,14 +90,13 @@ function getDiff(filename) {
 }
 
 async function promptUser(prompt) {
-
     const response = await axios.post('http://127.0.0.1:11434/api/generate', {
         prompt: prompt,
         model: "llama3:8b",
         stream: false,
         options: {
             num_keep: 5,
-            seed: 123,
+            // seed: 123,
             num_predict: 20,
             top_k: 30,
             top_p: 2,
@@ -126,21 +129,31 @@ async function promptUser(prompt) {
 }
 
 function postTraitement(text, commitType) {
+    // console.log(text)
     const emojiRegex =  /\p{Extended_Pictographic}/gu;
-
 
     let res = text.trim();
     res = res.replace(/[^a-zA-Z\p{Extended_Pictographic}\s:]/gu, ""); // Remove special characters
-    res = res.replace(/\n/g, " ");
+    res = res.replace(/\n/g, " "); // Remove new lines
 
     res = res.split(": ").shift() + ": " + res.split(": ").slice(1).join(": ").replaceAll(emojiRegex, "");
     res = res.replace(/['"`]/g, '');
-    console.log(res)
 
-    if (!text.match(emojiRegex)) res = commitTypes[commitType] + " " + res;
+    if (!text.match(emojiRegex)) res = commitTypes[commitType] + " " + res; // Add emoji if not present
 
     const typePattern = new RegExp(`(${Object.keys(commitTypes).map(type => commitTypes[type].trim()).join('|')})`);
-    res = res.replace(typePattern, match => ` ${match}`);
+    res = res.replace(typePattern, match => ` ${match}`); // Add space after emoji
+
+    const type = res.split(":")[0].trim().replace(emojiRegex, "")
+    if (type === "") {
+        const emoji = res.match(emojiRegex)[0]
+        if (emoji) {
+            const type = Object.keys(commitTypes).find(key => commitTypes[key] === emoji)
+            res = res.replace(emoji, commitTypes[type] +" " +type+" ")
+        }
+    }
+
+    res = res.replace(/(\s{2,})/g, " "); // Remove multiple spaces
 
     return res;
 }
@@ -225,16 +238,6 @@ async function getCommitMessage() {
 }
 
 function detectCommitType(message) {
-    const detect = [
-        {feat: ["feature", "feat", "add", "new"]},
-        {fix: ["fix", "bug", "error"]},
-        {docs: ["docs", "documentation"]},
-        {style: ["style", "format"]},
-        {refactor: ["refactor", "improve"]},
-        {test: ["test", "testing"]},
-        {chore: ["chore", "update", "change"]}
-    ]
-
     const words = message.split(" ");
     for (const type of detect) {
         for (const key in type) {
