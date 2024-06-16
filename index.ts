@@ -16,6 +16,7 @@ const commitTypes = [
     "🔧 chore: "
 ];
 
+// If you have a better prompt, feel free to change it :)
 const promptText = `Summarize this git diff into a useful, 10 words commit message. 
 Patern is: <emoji> <type>: <message>
 You can use the following types: ${JSON.stringify(commitTypes)} :`;
@@ -42,6 +43,8 @@ function postTraitement(text: string): string {
     let res = text
     res = res.replace(/^[^✨🚑📝💄♻️✅🔧]*/, ""); // remove everything before the emoji
     res = res.replace(/['"`]/g, "")
+    res = res.split("\n")[0]
+
 
     return res
 }
@@ -74,7 +77,7 @@ async function getCommitMessage(): Promise<{ msg: string, filename: string }[]> 
         try {
             diff = getDiff(file);
         } catch (error) {
-            console.error(`Error getting diff for file ${file}. Try to commit manually.`);
+            console.error(`❌ Error getting diff for file ${file}. Try to commit manually.`);
             continue;
         }
 
@@ -87,7 +90,7 @@ async function getCommitMessage(): Promise<{ msg: string, filename: string }[]> 
                 response = await prompt(promptText + diff);
                 commitMessage = postTraitement(response);
             } catch (e) {
-                console.error(`Error generating commit message for file ${file}. Try to commit manually.`);
+                console.error(`❌ Error generating commit message for file ${file}. Try to commit manually.`);
                 break;
             }
         }
@@ -100,7 +103,7 @@ async function getCommitMessage(): Promise<{ msg: string, filename: string }[]> 
     spinner.stop();
     return results;
 }
-//disable warnings
+
 execSync('git config core.autocrlf false')
 
 getCommitMessage().then((res: Array<{ msg: string, filename: string }>) => {
@@ -109,11 +112,6 @@ getCommitMessage().then((res: Array<{ msg: string, filename: string }>) => {
     for (const {msg, filename} of res) {
         execSync(`git add ${filename}`)
         execSync(`git commit -m "${msg}" ${filename}`)
-        console.log(`✅ ${filename}: ${msg}`)
+        console.log(`✅  ${filename}: ${msg}`)
     }
 })
-
-//add cross to all console.error
-console.error = (message: string) => {
-    console.log(`❌ ${message}`)
-}
